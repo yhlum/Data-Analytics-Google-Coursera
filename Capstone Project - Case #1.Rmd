@@ -1,0 +1,249 @@
+---
+title: "Google Data Analytics Capstone Project - Case Study #1"
+author: "ylum"
+date: "06/14/2022"
+output: html_document
+---
+
+## INTRO
+
+This is an R Markdown document for Coursera's Google Data Analytics Capstone Project, Case Study #1. The output will be in html.
+
+In this case study, we will perform data analysis for Cyclistic, a fictional bike-share company, in order to help them attract more riders. We will follow the steps of the data analysis process: Ask, Prepare, Process, Analyze, Share, and Act.
+
+The director of marketing and our manager, has set a clear goal: Design marketing strategies aimed at converting casual riders into annual members. Analyze Cyclistic historical bike trip data to identify trends that would help acheieve this goal.
+
+## ASK
+
+Our business task is to develop recommendations on how to convert casual riders to annual members by identifying how annual members and casual riders use Cyclistic bikes differently. We will analyze Cyclistic historical bike trip data to reach our conclusions.
+
+```{r, include=FALSE}
+library(janitor)
+library(lubridate)
+library(tidyverse)
+```
+
+## PREPARE
+
+After downloading the previous 12 months of Cyclistic trip data, merge the files into one view in R Studio.
+
+```{r}
+df1 <- read.csv("202104-divvy-tripdata.csv") 
+df2 <- read.csv("202105-divvy-tripdata.csv") 
+df3 <- read.csv("202106-divvy-tripdata.csv") 
+df4 <- read.csv("202107-divvy-tripdata.csv") 
+df5 <- read.csv("202108-divvy-tripdata.csv") 
+df6 <- read.csv("202109-divvy-tripdata.csv") 
+df7 <- read.csv("202110-divvy-tripdata.csv") 
+df8 <- read.csv("202111-divvy-tripdata.csv") 
+df9 <- read.csv("202112-divvy-tripdata.csv") 
+df10 <- read.csv("202201-divvy-tripdata.csv") 
+df11 <- read.csv("202202-divvy-tripdata.csv") 
+df12 <- read.csv("202203-divvy-tripdata.csv")
+bike_rides <- rbind(df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12)
+```
+
+## PROCESS
+
+Find the length of time for each ride. Remove rides that take 0 mins or less. Round up each bike ride duration to the nearest min. Identify the day of the week and the month of the year for the start date of each ride. 
+
+```{r}
+bike_rides$ymd <- as.Date(bike_rides$started_at)
+bike_rides$duration <- difftime(bike_rides $ended_at, bike_rides$started_at, units = c("mins"))
+bike_rides_clean <- bike_rides %>% filter(duration > 0)
+bike_rides_clean$day_of_week <- weekdays(bike_rides_clean$ymd)
+bike_rides_clean$month <- month(bike_rides_clean$ymd)
+bike_rides_clean$round <- round(bike_rides_clean$duration)
+```
+
+The `bike_rides_clean` data set contains `r nrow(bike_rides_clean)` rows of data and there are `r bike_rides_clean$ride_id[duplicated(bike_rides_clean$ride_id)]` duplicated Ride IDs.
+
+**Note:** 145 rows filtered out due to a duration of 0 or less
+
+## ANALYZE
+
+Filter the data by member, casual, and all riders. Find the mean, median, mode, min, and max duration per bike ride for each of the 3 data sets. 
+
+```{r}
+df_mem <- bike_rides_clean %>% filter(member_casual == "member")
+df_cas <- bike_rides_clean %>% filter(member_casual == "casual")
+df <- bike_rides_clean
+
+```{r}
+get_mode <- function(x) 
+{ #Create Mode Function
+unique_x <- unique(x)
+tabulate_x <- tabulate(match(x,unique_x))
+unique_x[tabulate_x == max(tabulate_x)]
+}
+```
+
+```{r}
+df_mem$mean <- mean(df_mem$duration)
+df_mem$median <- median(df_mem$duration)
+df_mem$mode <- get_mode(df_mem$round)
+df_mem$min <- min(df_mem$duration)
+df_mem$max <- max(df_mem$duration)
+```
+
+```{r}
+df_cas$mean <- mean(df_cas$duration)
+df_cas$median <- median(df_cas$duration)
+df_cas$mode <- get_mode(df_cas$round)
+df_cas$min <- min(df_cas$duration)
+df_cas$max <- max(df_cas$duration)
+```
+
+```{r}
+df$mean <- mean(df$duration)
+df$median <- median(df$duration)
+df$mode <- get_mode(df$round)
+df$min <- min(df$duration)
+df$max <- max(df$duration)
+```
+
+**Difference in Usage Duration**
+
++ **All riders:** Mean (21.5 mins), Median (11.7 mins), Mode (6 mins), Max (55944.2 mins)
++ **Member riders:** Mean (13.4 mins), Median (9.4 mins), Mode (6 mins), Max (1499.9 mins)
++ **Casual riders:** Mean (31.7 mins), Median (15.8 mins), Mode (8 mins), Max (55944.2 mins)
+
+## SHARE
+
+Create visualizations to show how member rides differ from casual rides by
+
+1. Day of the week usage 
+1. Month of they year usage 
+1. Bike type usage 
+1. Start to end station routes
+
+```{r, results='hide'}
+df_mem_days = df_mem %>% group_by(day_of_week) %>% summarize(day_of_week_n = n())
+view(df_mem_days)
+H <- c(439.4,490.1,499.8,475.3,453.1,431.3,387.7)
+M <- c("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
+png(file = "member_rides_per_day.png")
+barplot(H,names.arg = M,xlab = "Days of the Week",ylab = "Total Rides Taken in Thousands",col = "blue",main = "Members Rides by Day of the Week")
+dev.off()
+```
+
+```{r, results='hide'}
+df_cas_days = df_cas %>% group_by(day_of_week) %>% summarize(day_of_week_n = n())
+view(df_cas_days)
+H <- c(292.6,276.3,286.3,293.6,364.2,549.9,485.7)
+M <- c("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
+png(file = "casual_rides_per_day.png")
+barplot(H,names.arg = M,xlab = "Days of the Week",ylab = "Total Rides Taken in Thousands",col = "blue",main = "Casual Rides by Day of the Week")
+dev.off()
+```
+
+```{r}
+df_mem_mon = df_mem %>% group_by(month) %>% summarize(month_m = n())
+df_cas_mon = df_cas %>% group_by(month) %>% summarize(month_c = n())
+df_mem_cas_join_mon <- merge(x=df_cas_mon,y=df_mem_mon,by="month")
+df_mem_cas_join_mon <- rename(df_mem_cas_join_mon,casual_rides = month_c,member_rides=month_m)
+write.csv(df_mem_cas_join_mon,"df_mem_cas_join_mon.csv")
+
+```
+
+```{r, results='hide'}
+df_n = df %>% group_by(rideable_type) %>% summarize(rideable_type_n = n())
+view(df_n)
+x <- c(3250691,303989,2168852)
+labels <- c("Classic","Docked","Electric")
+piepct <- round(100*x/sum(x),1)
+png(file = "total_ride_type_pct.png")
+pie(x, labels = piepct, main = "All Rides by Rideable Type",col = rainbow(length(x)))
+legend("topright",c("Classic","Docked","Electric"),cex = 0.8, fill = rainbow(length(x)))
+dev.off()
+```
+
+```{r, results='hide'}
+df_mem_n = df_mem %>% group_by(rideable_type) %>% summarize(rideable_type_n = n())
+view(df_mem_n)
+x <- c(1192903,1183776)
+labels <- c("Classic","Electric")
+piepct <- round(100*x/sum(x),1)
+png(file = "total_ride_type_pct_member.png")
+pie(x, labels = piepct, main = "Rides by Rideable Type for Members",col = rainbow(length(x)))
+legend("topright",c("Classic","Electric"),cex = 0.8, fill = rainbow(length(x)))
+dev.off()
+```
+
+```{r, results='hide'}
+df_cas_n = df_cas %>% group_by(rideable_type) %>% summarize(rideable_type_n = n())
+view(df_cas_n)
+x <- c(1257512,303980,984702)
+labels <- c("Classic","Docked","Electric")
+piepct <- round(100*x/sum(x),1)
+png(file = "total_ride_type_pct_casual.png")
+pie(x, labels = piepct, main = "Rides by Rideable Type for Casual",col = rainbow(length(x)))
+legend("topright",c("Classic","Docked","Electric"),cex = 0.8, fill = rainbow(length(x)))
+dev.off()
+```
+
+```{r}
+df_mem <- df_mem %>% na_if("") %>% na.omit
+df_mem$start_end <- paste(df_mem$start_station_name," TO ", df_mem$end_station_name)
+mem_start_pts = df_mem %>% group_by(start_end) %>% summarize(start_end_name_m = n())
+mem_start_pts <- mem_start_pts %>% arrange(desc(start_end_name_m), start_end)
+
+df_cas <- df_cas %>% na_if("") %>% na.omit
+df_cas$start_end <- paste(df_cas$start_station_name," TO ", df_cas$end_station_name)
+cas_start_pts = df_cas %>% group_by(start_end) %>% summarize(start_end_name_c = n())
+cas_start_pts <- cas_start_pts %>% arrange(desc(start_end_name_c), start_end)
+
+df_mem_cas_join <- merge(x=cas_start_pts,y=mem_start_pts,by="start_end")
+df_mem_cas_join <- rename(df_mem_cas_join,casual_rides_started_from_to = start_end_name_c,member_rides_started_from_to=start_end_name_m)
+df_mem_cas_join <- df_mem_cas_join %>% arrange(desc(member_rides_started_from_to), casual_rides_started_from_to)
+write.csv(df_mem_cas_join,"df_mem_cas_join.csv")
+```
+
+**Note:** Casual rider data includes \~331K rides missing Start Station name & Member rider data includes \~400K+ riders missing Start Station name
+
+## ACT
+
+### Findings:
+1. Difference in Usage Duration
+    * All riders: Mean (21.5 mins), Median (11.7 mins), Mode (6 mins), Max (55944.2 mins)
+    * Member riders: Mean (13.4 mins), Median (9.4 mins), Mode (6 mins), Max (1499.9 mins)
+    * Casual riders: Mean (31.7 mins), Median (15.8 mins), Mode (8 mins), Max (55944.2 mins)
+1. Day of the Week Usage
+    * Member riders peak usage is on Wednesday, followed by Tuesday and Thursday 
+    * Casual riders peak usage is on Saturday, followed by Sunday and Friday
+1. Month of the Year Usage
+    * About 50% of Member rider usage occurred in July, August, September, and October
+    * About 50% of Casual rider usage occurred in June, June, August
+1. Bike Type Usage
+    * Both Member and Casual riders prefer classic bikes then electric bikes. Member riders do not use docked bikes but Casual riders do.
+  
+### Recommendations
+1. Ride IDs linked to user emails & mobile phone/device; Unlimited marketing budget; Unlimited rides usage model
+    * Offer 2 months free with first annual member plan purchase
+    * Email marketing campaign for casual riders starting in March, after winter season
+    * Send SMS text or push notification offers to casual riders after 3rd casual ride completed in the year
+    * Create QR code print ads on docked bike stations from March to September
+    * Create QR code print ads at top 25 start and end stations for casual riders
+    * Sponsor/Promote at top 25 high foot traffic start and end stations for casual riders, like museums or theaters
+1. For a more targeted marketing campaign
+    * Offer 2 months free with first annual member plan purchase
+    * Email marketing campaign to casual riders who share the same start and end stations as the top 25 start and end stations for member riders starting in March, after winter season
+    * SMS text or push notification offers to these same casual riders when they start a ride on a weekday, Monday - Friday 
+
+### Additional Data 
+To improve our analysis and recommendations, it would be helpful to have the Rider ID information to find: 
+
+1. Avg number of rides per year for members v casual riders 
+1. Avg number of start points per rider per year for member v casual riders 
+1. Total number of unique casual riders that may be targeted for marketing campaigns based on casual rider start stations
+1. Which casual rider IDs prefer what ride types?
+1. Is this casual rider ID a seasonal or year round rider?
+
+### More Helpful Data
+It would also be helpful to obtain the following information:
+
+1. How do casual riders commute to work?
+1. What is the average distance for a casual rider's commute to work versus a member rider? 
+1. What are the pricing plans for member and casual riders?  
+1. What is the LTV per rider type and what is an acceptable CAC?
+1. Why do casual riders choose docked bikes while member riders do not?
