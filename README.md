@@ -1,4 +1,4 @@
-# Data-Analtytics-Capstone
+# Data-Analtytics-Capstone-Case#1
 Coursera Data Analytics Certificate Course by Google | Capstone Project | Case Study #1
 
 This repository contains files created for the Capstone Project to conclude the Data Analytics Professional Certificate course by Google offered on Coursera.
